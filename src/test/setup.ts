@@ -7,6 +7,10 @@ afterEach(() => {
 });
 
 // Mock crypto.randomUUID for JSDOM
-(window as any).crypto = {
-  randomUUID: () => 'test-uuid',
-};
+let counter = 0;
+Object.defineProperty(window, 'crypto', {
+  value: {
+    randomUUID: () => `test-uuid-${counter++}`,
+  },
+  writable: true,
+});
