@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String             @id @default(uuid())
+  email        String             @unique
+  passwordHash String?
+  fullName     String?
+  avatarUrl    String?
+  mfaSecret    String?
+  mfaEnabled   Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  workspaces   Workspace[]        @relation("WorkspaceOwner")
+  memberships  WorkspaceMember[]
+  notes        Note[]             @relation("NoteAuthor")
+}
+
+model Workspace {
+  id          String            @id @default(uuid())
+  name        String
+  ownerId     String
+  owner       User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  settings    String            @default("{}")
+  createdAt   DateTime          @default(now())
+  members     WorkspaceMember[]
+  folders     Folder[]
+  notes       Note[]
+}
+
+model WorkspaceMember {
+  workspaceId String
+  userId      String
+  role        String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+}
+
+model Folder {
+  id          String     @id @default(uuid())
+  workspaceId String
+  parentId    String?
+  name        String
+  createdAt   DateTime   @default(now())
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent      Folder?    @relation("FolderToFolder", fields: [parentId], references: [id], onDelete: SetNull)
+  subFolders  Folder[]   @relation("FolderToFolder")
+  notes       Note[]
+}
+
+model Note {
+  id              String    @id @default(uuid())
+  workspaceId     String
+  folderId        String?
+  authorId        String?
+  title           String
+  contentMarkdown String
+  contentVector   String?
+  frontmatter     String    @default("{}")
+  isArchived      Boolean   @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder          Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  author          User?     @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+}
